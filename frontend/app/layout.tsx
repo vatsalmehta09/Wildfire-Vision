@@ -14,6 +14,14 @@ const _inter = Inter({ subsets: ["latin"] });
 const _spaceMono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"] });
 
 // ⭐ Component that highlights active navigation item
+/**
+ * Navigation link that applies active-route styling when the current pathname
+ * matches `href`.
+ *
+ * @param props.href  - The target URL path for the link.
+ * @param props.label - The visible link text.
+ * @returns An anchor element with conditional active styling.
+ */
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname()
   const isActive = pathname === href
@@ -30,6 +38,16 @@ function NavLink({ href, label }: { href: string; label: string }) {
   )
 }
 
+/**
+ * Root layout component applied to every page in the application.
+ *
+ * Wraps page content with a sticky header (including the `NavLink` navigation
+ * bar), a footer, and the Vercel Analytics script. Enforces the dark colour
+ * scheme via the `dark` class on `<html>`.
+ *
+ * @param props.children - The active page content rendered by Next.js.
+ * @returns The full-page HTML shell as a JSX element.
+ */
 export default function RootLayout({
   children,
 }: {

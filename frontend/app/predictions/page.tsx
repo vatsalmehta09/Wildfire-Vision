@@ -6,6 +6,14 @@ import { FRPChart } from '@/components/frp-chart';
 import { FireMap } from '@/components/fire-map';
 import { AIInsights } from './AIInsights';
 
+/**
+ * Predictions page component.
+ *
+ * Automatically fetches the next-30-day wildfire forecast on mount and renders
+ * a `PredictionChart`, a `FRPChart`, a `FireMap`, and an `AIInsights` panel.
+ *
+ * @returns The JSX element for the /predictions route.
+ */
 export default function PredictionsPage() {
   const [data, setData] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
@@ -15,6 +23,13 @@ export default function PredictionsPage() {
     loadForecast();
   }, []);
 
+  /**
+   * Fetches the 30-day wildfire forecast from the backend API, formats the
+   * returned data for chart consumption, and stores it in component state.
+   *
+   * Each forecast point is normalized to `{ ds, y, yhat, yhat_upper, yhat_lower }`
+   * with `ds` formatted as a short locale date string.
+   */
   const loadForecast = async () => {
     setIsLoading(true);
 

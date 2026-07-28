@@ -1,10 +1,12 @@
 # 🔥 Wildfire Vision
 
+![Wildfire Vision Demo](assets/demo-animation.gif)
+
 An AI-powered wildfire prediction and analysis platform for India, using NASA MODIS satellite data, Facebook Prophet time-series forecasting, and Google Gemini AI for intelligent risk insights.
 
 ---
 
-## 📸 Overview
+## 📸 Overview & App Preview
 
 This is a **monorepo** containing both the frontend and backend:
 
@@ -12,6 +14,25 @@ This is a **monorepo** containing both the frontend and backend:
 |---|---|---|
 | **Backend** | FastAPI + Prophet + Gemini AI | REST API serving wildfire forecasts, historical data, and AI-generated risk insights |
 | **Frontend** | Next.js 15 + React 19 + Leaflet | Interactive dashboard with live maps, charts, and AI insights |
+
+### User Interface Highlights
+
+#### Interactive Forecasting & Real-Time Maps
+<div align="center">
+  <img src="assets/hotspots-prediction-map.png" alt="Hotspots Prediction Map" width="48%">
+  <img src="assets/forecast-bounds.png" alt="Forecast Bounds" width="48%">
+</div>
+
+#### Historical Analysis & Trends
+<div align="center">
+  <img src="assets/historical-intense-map.png" alt="Historical Intense Fires Map" width="48%">
+  <img src="assets/historical-monthly-bar.png" alt="Historical Monthly FRP" width="48%">
+</div>
+
+#### AI-Powered Insights
+<div align="center">
+  <img src="assets/ai-insights.png" alt="AI Insights Dashboard" width="80%">
+</div>
 
 ---
 
@@ -23,7 +44,6 @@ wildfire-vision/
 │   ├── wildfire_webapp.py         # Main API server
 │   ├── prophet_wildfire_model.joblib  # Trained Prophet model
 │   ├── processed_daily_fire_data.csv  # Pre-processed fire data
-│   ├── requirements.txt           # Python dependencies
 │   ├── .env.example               # Environment variable template
 │   └── model_training.ipynb       # Data exploration & model training
 │
@@ -32,6 +52,7 @@ wildfire-vision/
 │   ├── components/                # Reusable UI components
 │   └── package.json
 │
+├── requirements.txt               # Python dependencies
 └── README.md
 ```
 
@@ -49,22 +70,29 @@ wildfire-vision/
 
 ### ⚙️ Backend Setup
 
+### ⚙️ Backend Setup
+
 ```bash
-# 1. Navigate to the backend folder
-cd backend
-
-# 2. (Recommended) Create and activate a virtual environment
-python -m venv venv
+# 1. Create and activate a virtual environment at the repository root
+python -m venv .venv
 # On Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 # On macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 
-# 3. Install dependencies
+# 2. Install dependencies (from the root directory)
 pip install -r requirements.txt
 
+# 3. Navigate to the backend folder
+cd backend
+
 # 4. Set up environment variables
+# Mac/Linux
 cp .env.example .env
+
+# Windows (Command Prompt or PowerShell)
+copy .env.example .env
+
 # Then open .env and replace the placeholder with your actual Gemini API key
 
 # 5. Start the development server

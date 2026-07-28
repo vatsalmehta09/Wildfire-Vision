@@ -1,32 +1,35 @@
 """
-FASTAPI BACKEND FOR WILDFIRE PREDICTIONS
-========================================
-This backend uses:
-  - Your saved Prophet model: prophet_wildfire_model.joblib
-  - Your processed dataframe: processed_daily_fire_data.csv (daily median data)
-  - FastAPI + pandas
-  - Two endpoints:
-        /api/past?year=2024&month=1
-        /api/predictions?year=2025&month=12
-  - Both endpoints return lat, lon, frp (historic or predicted)
+FastAPI backend for Wildfire Vision predictions.
 
-How the backend works
----------------------
-1. Loads trained Prophet model ONCE at server startup.
-2. Loads your processed dataframe (daily aggregate with lat/long + FRP).
-3. For prediction endpoint: 
-       - Takes the same lat/long positions from the filtered dataframe
-       - Builds Prophet `future` df with the filtered dates
-       - Calls model.predict()
-       - Merges yhat with lat/long
+This module serves as the REST API layer for the Wildfire Vision application.
+It loads a pre-trained Facebook Prophet model and a processed historical fire
+dataframe at startup, then exposes endpoints for past data retrieval, future
+FRP (Fire Radiative Power) forecasting, Gemini-powered insights generation,
+and geographic filtering of fire hotspots.
 
-Run command:
-    uvicorn server:app --reload --port 5000
+Artifacts required in the working directory:
+    prophet_wildfire_model.joblib: Serialised Prophet model.
+    processed_daily_fire_data.csv: Daily median fire data with columns
+        ``acq_date``, ``latitude``, ``longitude``, and ``frp``.
 
-Make sure these files exist in the same folder:
-    prophet_wildfire_model.joblib
-    processed_daily_fire_data.csv
+Environment variables:
+    GEMINI_API_KEY: API key for the Google Gemini generative AI client.
 
+Run with::
+
+    uvicorn wildfire_webapp:app --reload --port 5000
+
+Endpoints:
+    GET  /                           Health check.
+    GET  /api/past                   Historical FRP records.
+    GET  /api/predictions            Prophet-predicted FRP for a period.
+    GET  /api/forecast               30-day forecast with spatial filtering.
+    GET  /api/next-30-days           Next-30-day forecast from today.
+    GET  /api/historical-monthly     Monthly median FRP for a bounding box.
+    GET  /api/historical-map         Spatial FRP points for map rendering.
+    POST /api/insights               Gemini-generated wildfire risk insights.
+    POST /api/insights-stream        Streaming Gemini insights (NDJSON).
+    POST /api/insights-progressive   Section-by-section progressive insights.
 """
 
 from fastapi.responses import StreamingResponse
@@ -86,6 +89,25 @@ for col in numeric_cols:
 # HELPER — Filter by year/month
 # ------------------------------
 def filter_df(year: int, month: int | None = None):
+    """Filter the global fire dataframe by year and optional month.
+
+    Rows with missing ``latitude`` or ``longitude`` values are dropped
+    before the result is returned.
+
+    Args:
+        year: Calendar year to filter on (e.g. ``2024``).
+        month: Optional calendar month (1–12) to further narrow the result.
+            When ``None`` all months within the given year are included.
+
+    Returns:
+        A copy of the filtered ``pandas.DataFrame`` indexed by ``acq_date``,
+        containing at minimum the columns ``latitude``, ``longitude``, and
+        ``frp`` with no NaN coordinates.
+
+    Example:
+        >>> df_jan = filter_df(2024, month=1)
+        >>> df_year = filter_df(2023)
+    """
     df_f = df[df.index.year == year]
     if month:
         df_f = df_f[df_f.index.month == month]
@@ -94,9 +116,31 @@ def filter_df(year: int, month: int | None = None):
 
 @app.get("/api/next-30-days")
 def next_30_days():
-    """
-    Returns the next 30 days of forecast starting TOMORROW
-    relative to real 'today' date.
+    """Return a 30-day FRP forecast starting from tomorrow's date.
+
+    Generates a one-year-ahead Prophet forecast, then slices the 30
+    calendar days strictly after today (UTC). Spatial hotspot locations
+    are sampled from the full historical dataframe to populate the map
+    layer.
+
+    Returns:
+        dict: A JSON-serialisable dictionary with two keys:
+
+        - ``forecast`` (list[dict]): Up to 30 records, each containing
+          ``ds`` (ISO date string), ``yhat``, ``yhat_lower``,
+          ``yhat_upper``.
+        - ``locations`` (list[dict]): Up to 80 sampled historical fire
+          points, each containing ``ds``, ``latitude``, ``longitude``,
+          ``frp``.
+
+    Example::
+
+        GET /api/next-30-days
+        # Response:
+        # {
+        #   "forecast": [{"ds": "2026-07-29", "yhat": 45.2, ...}, ...],
+        #   "locations": [{"ds": "2024-03-15", "latitude": 23.7, ...}, ...]
+        # }
     """
 
     # 1) Build future df (1 year ahead)
@@ -140,11 +184,28 @@ def next_30_days():
 
 @app.post("/api/insights")
 def get_insights(data: dict = Body(...)):
-    """
-    Takes wildfire data (forecast or map info) and returns:
-      - summary
-      - risk level
-      - preventive actions
+    """Generate Gemini wildfire risk insights from forecast and hotspot data.
+
+    Sends a structured prompt to the Gemini 2.5 Flash model containing
+    forecast FRP values and map hotspot coordinates, then returns the
+    model's plain-text analysis.
+
+    Args:
+        data (dict): Request body with the following optional keys:
+
+            - ``forecast`` (list[dict]): Forecasted FRP records (first 15
+              used). Defaults to ``[]``.
+            - ``map`` (list[dict]): Hotspot location records (first 20
+              used). Defaults to ``[]``.
+
+    Returns:
+        dict: On success, ``{"insights": str}`` containing the model's
+        analysis text.  On failure, ``{"error": str}`` with the
+        exception message.
+
+    Raises:
+        Exception: Any Gemini API error is caught internally and returned
+            as ``{"error": "<message>"}`` rather than propagated.
     """
     # Clean input data from frontend
     forecast = data.get("forecast", [])
@@ -220,6 +281,38 @@ def get_insights(data: dict = Body(...)):
 
 @app.post("/api/insights-stream")
 def stream_insights(data: dict = Body(...)):
+    """Stream structured JSON wildfire insights via server-sent text chunks.
+
+    Builds a Gemini prompt from the supplied forecast and hotspot data,
+    instructing the model to respond with a single JSON object. The
+    response is streamed chunk-by-chunk as plain text so the frontend can
+    progressively parse it.
+
+    Args:
+        data (dict): Request body with the following optional keys:
+
+            - ``forecast`` (list[dict]): Forecasted FRP records (first 15
+              used). Defaults to ``[]``.
+            - ``map`` (list[dict]): Hotspot location records (first 20
+              used). Defaults to ``[]``.
+            - ``region`` (str): Human-readable geographic focus label.
+              Defaults to ``"the geographic region of these hotspots"``.
+
+    Returns:
+        StreamingResponse: A ``text/plain`` streaming response whose
+        concatenated body is a single JSON object conforming to::
+
+            {
+              "summary": "...",
+              "trends": ["..."],
+              "high_risk_regions": ["..."],
+              "prevention": ["..."],
+              "post_fire_actions": ["..."],
+              "recovery": ["..."]
+            }
+
+        On Gemini error, yields ``{"error": "<message>"}``.
+    """
     forecast = data.get("forecast", [])
     map_points = data.get("map", [])
 
@@ -259,6 +352,7 @@ def stream_insights(data: dict = Body(...)):
         """
 
     def event_stream():
+        """Generator that yields text chunks from the Gemini streaming API."""
         try:
             stream = client.models.generate_content_stream(
                 model="gemini-2.5-flash",
@@ -275,12 +369,49 @@ def stream_insights(data: dict = Body(...)):
 
 @app.post("/api/insights-progressive")
 def insights_progressive(data: dict = Body(...)):
+    """Stream wildfire insights one section at a time as newline-delimited JSON.
+
+    Issues six sequential Gemini calls (summary, trends, high-risk regions,
+    prevention, post-fire actions, recovery), yielding each result as a
+    separate NDJSON line immediately after it is received. A final
+    ``{"done": true}`` line signals completion.
+
+    Args:
+        data (dict): Request body with the following optional keys:
+
+            - ``forecast`` (list[dict]): Forecasted FRP records.
+              Defaults to ``[]``.
+            - ``map`` (list[dict]): Hotspot location records.
+              Defaults to ``[]``.
+            - ``region`` (str): Human-readable geographic focus label.
+              Defaults to ``"the geographic region"``.
+
+    Returns:
+        StreamingResponse: An ``application/x-ndjson`` streaming response
+        where each line is a JSON object with a single key corresponding
+        to the section name, e.g.::
+
+            {"summary": "High fire risk expected across ..."}
+            {"trends": "FRP trending upward ..."}
+            ...
+            {"done": true}
+    """
     forecast = data.get("forecast", [])
     map_points = data.get("map", [])
     region_hint = data.get("region", "the geographic region")
 
     def gen_section(title, prompt):
-        """Helper to stream JSON objects per section."""
+        """Call Gemini once and yield a single NDJSON line for a report section.
+
+        Args:
+            title (str): Key name for the yielded JSON object
+                (e.g. ``"summary"`` or ``"trends"``).
+            prompt (str): Instruction text sent to the Gemini model.
+
+        Yields:
+            str: A newline-terminated JSON string of the form
+            ``'{"<title>": "<response text>"}\\n'``.
+        """
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
@@ -289,6 +420,7 @@ def insights_progressive(data: dict = Body(...)):
         yield json.dumps({title: text}) + "\n"
 
     def stream():
+        """Generator that sequences all six section calls and emits a done marker."""
         # 1) Summary
         yield from gen_section(
             "summary",
@@ -341,10 +473,34 @@ def forecast_future(
     year: int = Query(...),
     month: int | None = Query(None)
 ):
-    """
+    """Return a 30-day Prophet forecast and spatially filtered fire locations.
+
+    Runs the Prophet model 30 periods ahead and returns the tail of the
+    forecast. Simultaneously filters the historical dataframe by the
+    supplied bounding box (and optional month) to provide representative
+    spatial points for map rendering.
+
+    Args:
+        min_lat: Southern boundary of the bounding box (degrees).
+        max_lat: Northern boundary of the bounding box (degrees).
+        min_lon: Western boundary of the bounding box (degrees).
+        max_lon: Eastern boundary of the bounding box (degrees).
+        year: Calendar year used to filter spatial fire point data.
+        month: Optional calendar month (1–12) to further filter fire
+            point data. When ``None`` all months are included.
+
     Returns:
-    - 30-day Prophet future forecast (yhat, yhat_lower, yhat_upper)
-    - Fire locations sampled from the selected region
+        dict: A JSON-serialisable dictionary with two keys:
+
+        - ``forecast`` (list[dict]): 30 records each containing ``ds``
+          (ISO date string), ``yhat``, ``yhat_lower``, ``yhat_upper``.
+        - ``locations`` (list[dict]): Up to 80 sampled fire points from
+          the bounding box, each containing ``ds``, ``latitude``,
+          ``longitude``, ``frp``.
+
+    Example::
+
+        GET /api/forecast?min_lat=8&max_lat=37&min_lon=68&max_lon=97&year=2024
     """
 
     # --------------------------
@@ -391,13 +547,28 @@ def forecast_future(
 # ------------------------------
 @app.get("/api/past")
 def get_past(year: int, month: int | None = None):
-    """
-    Returns actual historic FRP values.
-    Format returned:
-        [
-          {"ds": "2024-01-01", "latitude": 23.7, "longitude": 86.3, "frp": 289.1},
-          ...
-        ]
+    """Return historical FRP records for a given year and optional month.
+
+    Delegates filtering to :func:`filter_df`, then serialises the result
+    to a list of JSON-compatible dictionaries.
+
+    Args:
+        year: Calendar year to retrieve data for (e.g. ``2024``).
+        month: Optional calendar month (1–12). When omitted the entire
+            year is returned.
+
+    Returns:
+        list[dict]: Each element represents one daily observation::
+
+            [
+              {"ds": "2024-01-01", "latitude": 23.7,
+               "longitude": 86.3, "frp": 289.1},
+              ...
+            ]
+
+    Example::
+
+        GET /api/past?year=2024&month=1
     """
 
     df_filtered = filter_df(year, month)
@@ -411,17 +582,35 @@ def get_past(year: int, month: int | None = None):
 # ------------------------------
 @app.get("/api/predictions")
 def get_predictions(year: int, month: int | None = None):
-    """
-    Predict FRP for all points in the chosen year/month using Prophet.
-    - Uses the SAME dates and SAME latitude/longitude as your daily dataframe
-    - Runs model.predict() on those ds dates
-    - Merges output yhat with lat/lon
+    """Return Prophet-predicted FRP values for historical lat/lon positions.
 
-    Output format:
-        [
-          {"ds": "2025-12-01", "latitude": 18.47, "longitude": 74.21, "frp": 21.3},
-          ...
-        ]
+    Filters the dataframe to the requested period, feeds the resulting
+    dates into the Prophet model, and merges the predicted ``yhat`` values
+    back with the original geographic coordinates. The ``yhat`` column is
+    renamed to ``frp`` to keep the response schema consistent with
+    :func:`get_past`.
+
+    Args:
+        year: Calendar year for which predictions are generated
+            (e.g. ``2025``).
+        month: Optional calendar month (1–12). When omitted predictions
+            cover the entire year.
+
+    Returns:
+        list[dict]: Each element contains predicted fire data for one
+        observation date::
+
+            [
+              {"ds": "2025-12-01", "latitude": 18.47,
+               "longitude": 74.21, "frp": 21.3},
+              ...
+            ]
+
+        Returns an empty list when no data matches the requested period.
+
+    Example::
+
+        GET /api/predictions?year=2025&month=12
     """
 
     df_filtered = filter_df(year, month)
@@ -458,8 +647,33 @@ def get_historical_monthly(
     min_lon: float = Query(...),
     max_lon: float = Query(...),
 ):
-    """
-    Returns MONTHLY median FRP for the selected region & year.
+    """Return monthly median FRP aggregates for a geographic bounding box.
+
+    Filters the historical dataframe to the specified year and bounding
+    box, then resamples to calendar-month frequency using the median FRP.
+    Adds human-readable ``month`` (integer) and ``month_name`` (3-letter
+    abbreviation) columns for charting convenience.
+
+    Args:
+        year: Calendar year to aggregate (e.g. ``2024``).
+        min_lat: Southern boundary of the bounding box (degrees).
+        max_lat: Northern boundary of the bounding box (degrees).
+        min_lon: Western boundary of the bounding box (degrees).
+        max_lon: Eastern boundary of the bounding box (degrees).
+
+    Returns:
+        list[dict]: One record per month that contains data::
+
+            [
+              {"frp": 120.5, "month": 3, "month_name": "Mar"},
+              ...
+            ]
+
+        Returns an empty list when no data matches the filters.
+
+    Example::
+
+        GET /api/historical-monthly?year=2024&min_lat=8&max_lat=37&min_lon=68&max_lon=97
     """
 
     df_filtered = df[
@@ -494,12 +708,33 @@ def get_historical_map(
     min_lon: float = Query(...),
     max_lon: float = Query(...),
 ):
-    """
-    Returns LAT/LON FRP data for mapping.
-    Filters by:
-    - Year
-    - Optional month
-    - Geographic bounding box
+    """Return historical fire point data for map rendering.
+
+    Applies three successive filters — year, optional month, and a
+    geographic bounding box — then drops rows with missing coordinates
+    before returning the full (unsampled) result set.
+
+    Args:
+        year: Calendar year to filter on (e.g. ``2024``).
+        month: Optional calendar month (1–12). When ``None`` all months
+            within ``year`` are included.
+        min_lat: Southern boundary of the bounding box (degrees).
+        max_lat: Northern boundary of the bounding box (degrees).
+        min_lon: Western boundary of the bounding box (degrees).
+        max_lon: Eastern boundary of the bounding box (degrees).
+
+    Returns:
+        list[dict]: All matching fire observation records::
+
+            [
+              {"ds": "2024-06-10", "latitude": 22.1,
+               "longitude": 79.4, "frp": 55.0},
+              ...
+            ]
+
+    Example::
+
+        GET /api/historical-map?year=2024&month=6&min_lat=8&max_lat=37&min_lon=68&max_lon=97
     """
 
     df_filtered = df[
@@ -529,6 +764,16 @@ def get_historical_map(
 # ------------------------------
 @app.get("/")
 def root():
+    """Health-check endpoint confirming the API is running.
+
+    Returns:
+        dict: A static message and a list of primary API endpoints::
+
+            {
+              "message": "Wildfire Vision API — backend running.",
+              "endpoints": ["/api/past", "/api/predictions"]
+            }
+    """
     return {
         "message": "Wildfire Vision API — backend running.",
         "endpoints": ["/api/past", "/api/predictions"]

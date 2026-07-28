@@ -1,61 +1,120 @@
-# ==============================================
-# Wildfire Vision — Root .gitignore
-# ==============================================
+# =========================
+# Python
+# =========================
 
-# ===========================
-# Python / Backend
-# ===========================
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
-backend/*.pyd
-backend/.venv/
-backend/venv/
-backend/env/
-backend/*.egg-info/
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Environment variables (NEVER commit)
-backend/.env
-backend/.env.local
+# C extensions
+*.so
 
-# Large raw data files — only keep processed output
-backend/*.csv
-!backend/processed_daily_fire_data.csv
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache/
+coverage.xml
+*.cover
+
+# Type checkers
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Linters
+.ruff_cache/
 
 # Jupyter
-backend/.ipynb_checkpoints/
+.ipynb_checkpoints/
 
-# ===========================
-# Node / Frontend
-# ===========================
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/build/
+# Environment variables
+.env
+.env.*
+!.env.example
 
-# Frontend env files
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
+# IDEs
+.vscode/
+.idea/
 
-# Frontend debug logs
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-
-# TypeScript build info
-frontend/*.tsbuildinfo
-frontend/next-env.d.ts
-
-# ===========================
-# Common
-# ===========================
+# OS files
 .DS_Store
 Thumbs.db
-desktop.ini
-.idea/
-.vscode/
+
+# =========================
+# Next.js / Node.js
+# =========================
+
+node_modules/
+
+.next/
+out/
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package managers
+.pnpm-store/
+
+# Build artifacts
+dist/
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Turborepo
+.turbo/
+
+# ESLint cache
+.eslintcache
+
+# =========================
+# Misc
+# =========================
+
+*.log
+*.tmp
 *.swp
 *.swo
+assets/

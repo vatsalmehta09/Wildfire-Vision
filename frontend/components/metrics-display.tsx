@@ -4,11 +4,28 @@
 
 import { Card } from '@/components/ui/card';
 
+/**
+ * Properties for the MetricsDisplay component.
+ */
 interface MetricsDisplayProps {
+  /** Mean Absolute Error value to display. */
   mae?: number;
+  /** Mean Absolute Percentage Error value to display. */
   mape?: number;
 }
 
+/**
+ * Renders two cards displaying model performance metrics: MAE and MAPE.
+ * Used to show how accurately the Prophet model aligns with historical values.
+ *
+ * @param props - Component properties containing the metric values.
+ * @returns JSX element containing the metric cards in a grid.
+ *
+ * @example
+ * ```tsx
+ * <MetricsDisplay mae={4.2} mape={15.3} />
+ * ```
+ */
 export function MetricsDisplay({ mae, mape }: MetricsDisplayProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -9,7 +9,12 @@ import { PredictionChart } from '@/components/prediction-chart';
 import { FireMap } from '@/components/fire-map';
 import { MetricsDisplay } from '@/components/metrics-display';
 
-// Mock data generator for demonstration
+/**
+ * Generates mock daily historical FRP data for demonstration purposes.
+ *
+ * @param params - Contains bounds and year.
+ * @returns Array of 30 mock daily FRP records.
+ */
 const generateMockHistoricalData = (params: HistoricalParams) => {
   const days = 30;
   const data = [];
@@ -22,6 +27,12 @@ const generateMockHistoricalData = (params: HistoricalParams) => {
   return data;
 };
 
+/**
+ * Generates mock monthly historical FRP data for demonstration purposes.
+ *
+ * @param params - Contains bounds and year.
+ * @returns Array of 12 mock monthly FRP records.
+ */
 const generateMockMonthlyData = (params: HistoricalParams) => {
   const months = 12;
   const data = [];
@@ -34,6 +45,11 @@ const generateMockMonthlyData = (params: HistoricalParams) => {
   return data;
 };
 
+/**
+ * Generates mock Prophet forecast data for demonstration purposes.
+ *
+ * @returns Array of 60 mock prediction records with bounds.
+ */
 const generateMockPredictionData = () => {
   const days = 60;
   const data = [];
@@ -59,6 +75,12 @@ const generateMockPredictionData = () => {
   return data;
 };
 
+/**
+ * Generates mock fire locations bounded within the specified coordinates.
+ *
+ * @param params - Contains geographic boundaries.
+ * @returns Array of randomly generated mock fire points.
+ */
 const generateMockFireLocations = (params: HistoricalParams) => {
   const locations = [];
   const count = Math.random() * 20 + 10;
@@ -74,6 +96,13 @@ const generateMockFireLocations = (params: HistoricalParams) => {
   return locations;
 };
 
+/**
+ * The main Dashboard component representing the root page (/).
+ * Manages the state for historical analysis and forecasting, fetching data
+ * from the FastAPI backend and distributing it to charting and map components.
+ *
+ * @returns JSX element containing the full dashboard UI.
+ */
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
@@ -101,6 +130,12 @@ export default function Dashboard() {
   //   }, 800);
   // };
 
+  /**
+   * Fetches historical data (either daily or monthly depending on `params.month`)
+   * and fire hotspot locations from the backend, then updates component state.
+   *
+   * @param params - Geographic and temporal boundaries for the historical query.
+   */
   const handleLoadHistorical = async (params: HistoricalParams) => {
     setIsLoading(true);
 
@@ -156,6 +191,12 @@ export default function Dashboard() {
     setIsLoading(false);
   };
 
+  /**
+   * Fetches the predicted forecast and locations, simulating a delay, and
+   * sets the resulting data to state. (Currently uses mock data).
+   *
+   * @param params - Geographic and temporal boundaries for the forecast query.
+   */
   const handleGenerateForecast = (params: ForecastParams) => {
     setIsLoading(true);
     

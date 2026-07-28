@@ -5,12 +5,31 @@
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
 
+/**
+ * Properties for the FRPChart component.
+ */
 interface FRPChartProps {
+  /** Array of data objects to plot (daily or monthly). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any[];
+  /** Heading displayed above the chart. */
   title: string;
+  /** Flag indicating if data is monthly (renders BarChart) or daily (renders LineChart). */
   isMonthly: boolean;
 }
 
+/**
+ * Renders a chart visualizing Fire Radiative Power (FRP) over time.
+ * Uses a BarChart for monthly aggregates and a LineChart for daily data.
+ *
+ * @param props - Component properties.
+ * @returns JSX element containing the Recharts chart inside a Card.
+ *
+ * @example
+ * ```tsx
+ * <FRPChart data={chartData} title="Monthly FRP Trends" isMonthly={true} />
+ * ```
+ */
 export function FRPChart({ data, title, isMonthly }: FRPChartProps) {
   if (!data || data.length === 0) {
     return (

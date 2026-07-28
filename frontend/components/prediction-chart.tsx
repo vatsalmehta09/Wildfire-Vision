@@ -5,10 +5,27 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
 
+/**
+ * Properties for the PredictionChart component.
+ */
 interface PredictionChartProps {
+  /** Array of forecast data objects containing dates, predictions (yhat), and bounds. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any[];
 }
 
+/**
+ * Renders a line chart visualizing the Prophet forecast for Fire Radiative Power (FRP).
+ * Displays the predicted values (`yhat`) alongside upper and lower confidence bounds.
+ *
+ * @param props - Component properties.
+ * @returns JSX element containing the forecast chart.
+ *
+ * @example
+ * ```tsx
+ * <PredictionChart data={forecastData} />
+ * ```
+ */
 export function PredictionChart({ data }: PredictionChartProps) {
   if (!data || data.length === 0) {
     return (

@@ -6,7 +6,12 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from "react-le
 import { useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 
-// Fix for tiles being misaligned / appearing small
+/**
+ * A helper component that hooks into the Leaflet map instance and invalidates
+ * its size after mounting to prevent tile misalignment or partial rendering.
+ *
+ * @returns null - this component does not render any visible UI.
+ */
 function ResizeFix() {
   const map = useMap();
   useEffect(() => {
@@ -17,17 +22,34 @@ function ResizeFix() {
   return null;
 }
 
+/**
+ * Represents a single fire detection point to be plotted on the map.
+ */
 interface FireLocation {
+  /** Latitude of the fire detection. */
   latitude: number;
+  /** Longitude of the fire detection. */
   longitude: number;
+  /** Fire Radiative Power (MW). */
   frp: number;
 }
 
+/**
+ * The internal Leaflet map component.
+ * Must be dynamically imported with SSR disabled since Leaflet relies on the browser's `window` object.
+ *
+ * @param props - Component properties.
+ * @param props.locations - Array of fire hotspot data points to render as circle markers.
+ * @param props.height - The height of the map container in pixels (default: 700).
+ * @returns JSX element containing the Leaflet map.
+ */
 export default function MapInner({
   locations,
   height = 700,
 }: {
+  /** Array of geographic fire points to plot. */
   locations: FireLocation[];
+  /** Height of the map container in pixels. */
   height?: number;
 }) {
   const center: [number, number] = [

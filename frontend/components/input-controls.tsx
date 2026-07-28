@@ -6,23 +6,58 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
+/**
+ * Properties for the InputControls component.
+ */
 interface InputControlsProps {
+  /** Callback fired when the user clicks "Load Historical Data". */
   onLoadHistorical: (params: HistoricalParams) => void;
+  /** Callback fired when the user clicks "Generate Forecast" (currently unused). */
   onGenerateForecast: (params: ForecastParams) => void;
+  /** Indicates whether an API call is currently in progress. */
   isLoading: boolean;
 }
 
+/**
+ * Parameters specifying a geographic bounding box and historical timeframe.
+ */
 export interface HistoricalParams {
+  /** Southern boundary of the bounding box in degrees. */
   minLatitude: number;
+  /** Northern boundary of the bounding box in degrees. */
   maxLatitude: number;
+  /** Western boundary of the bounding box in degrees. */
   minLongitude: number;
+  /** Eastern boundary of the bounding box in degrees. */
   maxLongitude: number;
+  /** The calendar year to retrieve data for. */
   year: number;
+  /** Optional calendar month (1-12). If omitted, returns monthly aggregates. */
   month?: number;
 }
 
+/**
+ * Parameters specifying a geographic bounding box and forecast timeframe.
+ * Currently aliases HistoricalParams.
+ */
 export interface ForecastParams extends HistoricalParams {}
 
+/**
+ * Renders the form controls allowing users to select geographic bounds and
+ * date ranges. Fires callbacks to load historical or forecast data.
+ *
+ * @param props - Component props: onLoadHistorical, onGenerateForecast, and isLoading.
+ * @returns JSX element containing the input controls.
+ *
+ * @example
+ * ```tsx
+ * <InputControls
+ *   onLoadHistorical={(params) => console.log(params)}
+ *   onGenerateForecast={(params) => console.log(params)}
+ *   isLoading={false}
+ * />
+ * ```
+ */
 export function InputControls({ onLoadHistorical, onGenerateForecast, isLoading }: InputControlsProps) {
   const [minLat, setMinLat] = useState(7.97);
   const [maxLat, setMaxLat] = useState(37.12);

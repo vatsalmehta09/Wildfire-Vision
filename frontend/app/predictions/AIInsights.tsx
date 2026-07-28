@@ -9,52 +9,94 @@ import { streamInsights } from "@/lib/fetchInsights";
 // =====================================
 // Types
 // =====================================
+/** A single day's Prophet forecast output. */
 interface ForecastPoint {
+  /** ISO date string for the forecast day. */
   ds: string;
+  /** Predicted FRP value (yhat). */
   yhat: number;
+  /** Lower bound of the 80 % confidence interval. */
   yhat_lower: number;
+  /** Upper bound of the 80 % confidence interval. */
   yhat_upper: number;
 }
 
+/** A fire hotspot location returned by the forecast API. */
 interface LocationPoint {
+  /** ISO date string associated with the detected fire event. */
   ds: string;
+  /** Geographic latitude of the fire hotspot. */
   latitude: number;
+  /** Geographic longitude of the fire hotspot. */
   longitude: number;
+  /** Fire Radiative Power (MW) at this location. */
   frp: number;
 }
 
+/** Structured AI-generated wildfire insights parsed from the streamed LLM response. */
 interface InsightsData {
+  /** Narrative overview of the forecast period. */
   summary?: string;
+  /** List of key fire behaviour trends observed in the forecast. */
   trends?: string[];
+  /** Geographic regions with elevated fire risk. */
   high_risk_regions?: string[];
+  /** Recommended preventive actions before fires occur. */
   prevention?: string[];
+  /** Mitigation steps to take immediately after a fire event. */
   post_fire_actions?: string[];
+  /** Long-term strategies for ecosystem and community recovery. */
   recovery?: string[];
 }
 
+/** Props for the {@link AIInsights} component. */
 interface AIInsightsProps {
+  /** Array of 30-day Prophet forecast points to send to the AI model. */
   forecast: ForecastPoint[];
+  /** Array of predicted fire hotspot locations to include in the AI prompt. */
   locations: LocationPoint[];
 }
 
+/** Props for the {@link Section} helper component. */
 interface SectionProps {
+  /** Heading text displayed above the body paragraph. */
   title: string;
+  /** Body text content; falls back to "No data available" when undefined. */
   body: string | undefined;
 }
 
+/** Props for the {@link ListSection} helper component. */
 interface ListSectionProps {
+  /** Heading text displayed above the bullet list. */
   title: string;
+  /** Array of list item strings; renders a fallback message when empty or undefined. */
   items: string[] | undefined;
 }
 
 // =====================================
 // Main Component
 // =====================================
+/**
+ * Displays AI-generated wildfire insights derived from forecast and location data.
+ *
+ * In its initial state the component shows a raw streaming text preview while
+ * the LLM response is being received. Once the full JSON payload is parsed it
+ * switches to a tabbed card layout with sections for summary, trends, high-risk
+ * regions, prevention, post-fire actions, and recovery strategies.
+ *
+ * @param props - {@link AIInsightsProps} containing forecast points and fire locations.
+ * @returns A card JSX element showing either the streaming preview or tabbed insights.
+ */
 export function AIInsights({ forecast, locations }: AIInsightsProps) {
   const [streaming, setStreaming] = useState(false);
   const [raw, setRaw] = useState("");
   const [data, setData] = useState<InsightsData | null>(null);
 
+  /**
+   * Streams AI-generated insights from the backend, accumulating raw text chunks
+   * as they arrive, then parses the complete response as JSON and stores the
+   * structured {@link InsightsData} in component state.
+   */
   const generate = async () => {
     setStreaming(true);
     setRaw("");
@@ -163,6 +205,12 @@ export function AIInsights({ forecast, locations }: AIInsightsProps) {
 // Helper Components
 // =====================================
 
+/**
+ * Renders a titled paragraph section for plain-text AI insight content.
+ *
+ * @param props - {@link SectionProps} with a title and optional body text.
+ * @returns A `<div>` containing a heading and a paragraph.
+ */
 function Section({ title, body }: SectionProps) {
   return (
     <div className="space-y-3">
@@ -174,6 +222,14 @@ function Section({ title, body }: SectionProps) {
   );
 }
 
+/**
+ * Renders a titled bullet list for AI insight content that consists of multiple
+ * items. Falls back to a plain {@link Section} when `items` is empty or undefined.
+ *
+ * @param props - {@link ListSectionProps} with a title and an optional items array.
+ * @returns A `<div>` containing a heading and a `<ul>` bullet list, or a
+ *   {@link Section} fallback.
+ */
 function ListSection({ title, items }: ListSectionProps) {
   if (!items || !items.length) {
     return <Section title={title} body="No data available" />;

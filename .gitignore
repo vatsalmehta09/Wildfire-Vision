@@ -1,0 +1,61 @@
+# ==============================================
+# Wildfire Vision — Root .gitignore
+# ==============================================
+
+# ===========================
+# Python / Backend
+# ===========================
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.venv/
+backend/venv/
+backend/env/
+backend/*.egg-info/
+
+# Environment variables (NEVER commit)
+backend/.env
+backend/.env.local
+
+# Large raw data files — only keep processed output
+backend/*.csv
+!backend/processed_daily_fire_data.csv
+
+# Jupyter
+backend/.ipynb_checkpoints/
+
+# ===========================
+# Node / Frontend
+# ===========================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Frontend env files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Frontend debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# TypeScript build info
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# ===========================
+# Common
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo

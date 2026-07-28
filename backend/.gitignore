@@ -1,0 +1,56 @@
+# =================================
+# Python
+# =================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+.env/
+
+# =================================
+# Environment Variables (NEVER commit these)
+# =================================
+.env
+.env.local
+.env.*.local
+config.json
+config.yaml
+*.secret
+*.key
+
+# =================================
+# Large Data Files (raw MODIS downloads)
+# =================================
+*.csv
+
+# Explicitly INCLUDE the processed data used by the API at runtime
+!processed_daily_fire_data.csv
+
+# =================================
+# Jupyter Notebooks
+# =================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# =================================
+# OS
+# =================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =================================
+# IDE
+# =================================
+.vscode/
+.idea/
+*.swp
+*.swo

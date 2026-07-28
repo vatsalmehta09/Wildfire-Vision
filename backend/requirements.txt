@@ -1,0 +1,23 @@
+# ==============================================
+# Wildfire Prediction Backend — Python Dependencies
+# ==============================================
+# Install with: pip install -r requirements.txt
+# Recommended: Python 3.11+
+
+# FastAPI + server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Data processing
+pandas>=2.2.0
+numpy>=1.26.0
+
+# ML Model
+prophet>=1.1.5
+joblib>=1.3.0
+
+# Google Gemini AI
+google-genai>=1.0.0
+
+# Environment variables
+python-dotenv>=1.0.0
